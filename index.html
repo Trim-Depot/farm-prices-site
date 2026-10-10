@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NorCal Flower Market Tracker</title>
+<meta name="apple-mobile-web-app-title" content="Market Tracker">
+<meta name="application-name" content="Market Tracker">
+<meta name="description" content="Live wholesale prices for Northern California flower, from real Trim Depot purchases.">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f3f0; --surface: #fcfcfb; --border: #e4e2dd; --grid: #ecebe7;
+    --text: #0b0b0b; --text-2: #52514e; --text-3: #7d7c77;
+    --range: #d9e6f7; --accent: #2a78d6;
+    --humboldt: #2a78d6; --mendo: #eb6834; --sierra: #1baf7a;
+    --seg-bg: #e9e8e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #111110; --surface: #1a1a19; --border: #2e2e2b; --grid: #262624;
+      --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
+      --range: #1f3550; --accent: #3987e5;
+      --humboldt: #3987e5; --mendo: #d95926; --sierra: #199e70;
+      --seg-bg: #262624;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --border: #2e2e2b; --grid: #262624;
+    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
+    --range: #1f3550; --accent: #3987e5;
+    --humboldt: #3987e5; --mendo: #d95926; --sierra: #199e70;
+    --seg-bg: #262624;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 56px; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--text-2); margin: 0; max-width: 640px; }
+  .meta { color: var(--text-3); font-size: 12px; margin-top: 6px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  section { margin-top: 16px; }
+  .hint { color: var(--text-3); font-size: 13px; margin: 0 0 12px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 20px 0 4px; align-items: center; }
+  .ctl { display: flex; flex-direction: column; gap: 4px; }
+  .ctl label { font-size: 12px; color: var(--text-3); }
+  .seg { display: inline-flex; background: var(--seg-bg); border-radius: 9px; padding: 3px; flex-wrap: wrap; }
+  .seg button {
+    font: inherit; font-size: 14px; border: 0; background: transparent; color: var(--text-2);
+    padding: 6px 12px; border-radius: 7px; cursor: pointer; min-height: 34px;
+  }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 600; }
+  .seg button:disabled { opacity: .35; cursor: default; }
+
+  .hero { display: grid; grid-template-columns: 1.1fr 2fr; gap: 16px; }
+  .big { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  .big small { font-size: 18px; font-weight: 500; color: var(--text-2); }
+  .label { font-size: 13px; color: var(--text-2); }
+  .stats { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 12px; }
+  .stat b { display: block; font-size: 18px; }
+  .stat span { font-size: 12px; color: var(--text-3); }
+
+  .regions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .region { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .region .name { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .region .price { font-size: 26px; font-weight: 700; margin-top: 6px; }
+  .region .detail { font-size: 12px; color: var(--text-2); }
+  .muted { color: var(--text-3); font-size: 13px; }
+
+  /* town range chart */
+  .rg-head { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; margin: 14px 0 4px; }
+  .rg-head:first-child { margin-top: 0; }
+  .row { display: grid; grid-template-columns: 140px 1fr 130px; align-items: center; gap: 10px; min-height: 34px; }
+  .row .town { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .town.region-all { font-weight: 600; }
+  .row .val { text-align: right; font-size: 13px; }
+  .row .val b { font-size: 14px; }
+  .row .val span { display: block; color: var(--text-3); font-size: 11px; white-space: nowrap; }
+  .track { position: relative; height: 26px; }
+  .track .bar { position: absolute; top: 8px; height: 10px; border-radius: 5px; background: var(--range); }
+  .track .dot { position: absolute; top: 4px; width: 4px; height: 18px; border-radius: 2px; margin-left: -2px; background: var(--text); }
+  .axis { position: relative; height: 18px; margin-left: 150px; margin-right: 140px; color: var(--text-3); font-size: 11px; }
+  .axis span { position: absolute; transform: translateX(-50%); }
+  .gridline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary .town::before { content: '▸ '; color: var(--text-3); }
+  details[open] > summary .town::before { content: '▾ '; }
+  details[open] { background: color-mix(in srgb, var(--accent) 5%, transparent); border-radius: 8px; padding-bottom: 4px; }
+  .hidden-note { font-size: 12px; color: var(--text-3); margin: 2px 0 0 140px; }
+  .legend-key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 10px; }
+  .legend-key i { display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 12px; color: var(--text-3); font-weight: 500; }
+  td b { font-size: 15px; }
+  td span { display: block; font-size: 11px; color: var(--text-3); white-space: nowrap; }
+  .towns td, .towns th { vertical-align: middle; }
+  .towns tr.region-row td { border-bottom: 0; padding-top: 18px; font-weight: 600; font-size: 13px; }
+  .towns tr.region-row:first-child td { padding-top: 6px; }
+  .towns tr.area td { font-weight: 600; }
+  .towns .rng { color: var(--text-2); }
+  @media (max-width: 560px) { .towns .hide-sm { display: none; } }
+  tr.sel td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+  .chart-wrap { position: relative; }
+  svg { display: block; width: 100%; overflow: visible; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+    white-space: nowrap; z-index: 2;
+  }
+  .tip .t { font-weight: 600; margin-bottom: 4px; }
+  .tip div { display: flex; align-items: center; gap: 6px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 2px; }
+  .topbar .brand { margin: 0; }
+  .submit-btn { font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: #16a34a; border: 0; border-radius: 999px; padding: 10px 18px; min-height: 44px; cursor: pointer; box-shadow: 0 2px 8px rgba(22,163,74,.35); white-space: nowrap; }
+  .submit-btn:hover { background: #15803d; }
+  /* Submit Your Flower form */
+  #submit-modal .modal-box { width: min(560px, 100%); height: min(900px, calc(100vh - 32px)); height: min(900px, calc(100dvh - 32px)); }
+  .sf-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px 20px; }
+  .sf-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .sf-label small { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+  .sf-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .sf-contact .sf-phone { grid-column: 1 / -1; }
+  .sf-rep { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: -8px 0 18px; }
+  .sf-rep button { font: inherit; font-size: 16px; font-weight: 600; min-height: 46px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+  .sf-rep button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sf-done .sf-callback { display: block; font-size: 26px; font-weight: 700; color: var(--accent); text-decoration: none; margin: 6px 0 4px; }
+  .sf-done .sf-save { font-size: 13px; color: var(--text-3); margin: 0 0 22px; }
+  .sf-in { font: inherit; font-size: 16px; width: 100%; min-height: 46px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .sf-in::placeholder { color: var(--text-3); }
+  .sf-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .sf-in.bad { border-color: #e5484d; }
+  .sf-tip { display: flex; gap: 12px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+  .sf-tip img { width: 66px; height: 88px; object-fit: cover; border-radius: 8px; flex: none; cursor: zoom-in; }
+  .sf-tip b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .sf-tip p { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .sf-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; background: var(--bg); }
+  .sf-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+  .sf-x { font: inherit; font-size: 13px; color: var(--text-3); background: none; border: 0; padding: 4px 6px; cursor: pointer; }
+  .sf-row { display: grid; grid-template-columns: 1fr 104px; gap: 8px; }
+  .sf-row .sf-in { background: var(--surface); }
+  .sf-lbs { position: relative; }
+  .sf-lbs .sf-in { padding-right: 36px; }
+  .sf-lbs span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 14px; pointer-events: none; }
+  .sf-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sf-thumb, .sf-add-photo { position: relative; width: 68px; height: 68px; border-radius: 10px; flex: none; }
+  .sf-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block; }
+  .sf-thumb.busy img { opacity: .45; }
+  .sf-thumb.busy::after { content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: sfspin .8s linear infinite; }
+  .sf-thumb.err img { opacity: .35; }
+  .sf-thumb.err::after { content: "Retry"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+  @keyframes sfspin { to { transform: rotate(360deg); } }
+  .sf-thumb button { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--bg); background: #444; color: #fff; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
+  .sf-add-photo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1.5px dashed var(--border); color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; background: var(--surface); }
+  .sf-add-photo b { font-size: 22px; line-height: 1; font-weight: 500; }
+  .sf-add-photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .sf-add-strain { display: block; width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--accent); background: transparent; border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 12px; min-height: 52px; cursor: pointer; }
+  .sf-add-strain:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .sf-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+  .sf-send { display: block; width: 100%; font: inherit; font-size: 17px; font-weight: 700; color: #fff; background: #16a34a; border: 0; border-radius: 12px; min-height: 52px; cursor: pointer; }
+  .sf-send:disabled { opacity: .6; cursor: default; }
+  .sf-status { font-size: 13px; color: var(--text-3); text-align: center; margin: 0 0 8px; min-height: 0; }
+  .sf-status:empty { display: none; }
+  .sf-status.bad { color: #e5484d; font-weight: 600; }
+  .sf-done { text-align: center; padding: 40px 12px; }
+  .sf-done .sf-check { width: 64px; height: 64px; border-radius: 50%; background: #16a34a; color: #fff; font-size: 34px; line-height: 64px; margin: 0 auto 14px; }
+  .sf-done h3 { font-size: 22px; margin: 0 0 6px; }
+  .sf-done p { color: var(--text-2); margin: 0 0 22px; }
+  .sf-done .sf-send { margin-bottom: 10px; }
+  .sf-ghost { display: block; width: 100%; font: inherit; font-size: 16px; font-weight: 600; color: var(--text); background: var(--seg-bg); border: 0; border-radius: 12px; min-height: 48px; cursor: pointer; }
+  .sf-zoom { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+  .sf-zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+  @media (max-width: 560px) { .submit-btn { font-size: 14px; padding: 9px 14px; } #submit-modal .modal-box { height: 100%; } .sf-scroll { padding: 12px 14px 18px; } }
+  td.nowrap { white-space: nowrap; }
+  @media (max-width: 560px) { td.nowrap { font-size: 14px; letter-spacing: -0.01em; } }
+  .expand-btn { display: block; width: 100%; margin-top: 12px; font: inherit; font-size: 16px; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 10px; padding: 14px; min-height: 48px; cursor: pointer; }
+  .moves { display: grid; grid-template-columns: minmax(0, 360px); gap: 10px; margin: 10px 0 14px; }
+  .moves:empty { display: none; }
+  .move { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .move-big { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+  .move.down .move-big { color: var(--mendo); }
+  .move.up .move-big { color: var(--sierra); }
+  .move-sub { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .move-from { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .brand { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .live { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--sierra); margin-right: 6px; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @media (prefers-reduced-motion: reduce) { .live i { animation: none; } }
+  .media-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; min-height: 34px; cursor: pointer; white-space: nowrap; }
+  .media-btn:hover { border-color: var(--accent); }
+  body.modal-open { overflow: hidden; }
+  .modal { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal[hidden] { display: none; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: min(760px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .modal-head h2 { margin: 0; font-size: 18px; }
+  .mm-close { font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--seg-bg); border: 0; border-radius: 8px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
+  .mm-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; display: grid; gap: 18px; }
+  .player-wrap { margin: 0; }
+  .player { position: relative; width: 100%; max-width: calc(65vh * var(--ar)); max-width: calc(65dvh * var(--ar)); aspect-ratio: var(--ar); margin: 0 auto; background: #000; border-radius: 10px; overflow: hidden; }
+  .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .player-wrap figcaption { text-align: center; font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  @media (max-width: 560px) {
+    .modal { padding: 0; align-items: stretch; }
+    .modal-box { width: 100%; max-height: none; height: 100%; border-radius: 0; border: 0; }
+    .media-btn { padding: 6px 9px; }
+  }
+  .hist-head { font-size: 16px; margin: 0 0 12px; line-height: 1.4; }
+  #strain-q { font: inherit; width: 100%; max-width: 360px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 10px; }
+  .strain-box { max-height: 560px; overflow-y: auto; }
+  .howto { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text-2); font-size: 13px; line-height: 1.5; }
+  .howto { font-size: 15px; }
+  .howto p { margin: 4px 0; }
+  .howto-title { font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .howto-ex { margin-top: 8px !important; padding-top: 8px; border-top: 1px solid var(--border); }
+  .howto b { color: var(--text); }
+  .strain-box thead th { position: sticky; top: 0; background: var(--surface); }
+  .cred { margin: 10px 0 0; font-size: 15px; color: var(--text); }
+  .cred b { font-weight: 700; }
+  .err { color: #c23a39; }
+
+  td span.lg, td span.sm { font-size: inherit; color: inherit; white-space: nowrap; }
+  td span span.lg, td span span.sm { display: inline; }
+  @media (max-width: 560px) { td span span.lg { display: none; } }
+  @media (min-width: 561px) { td span span.sm { display: none; } }
+  .sm, td span.sm { display: none; }
+  td span.lg { display: inline; }
+  @media (max-width: 560px) {
+    .lg, td span.lg { display: none; }
+    .sm, td span.sm { display: inline; }
+    .hide-sm { display: none; }
+    .ctl { width: 100%; }
+    .seg { display: flex; width: 100%; flex-wrap: nowrap; }
+    .seg button { flex: 1 1 0; padding: 8px 2px; min-height: 40px; font-size: 14px; white-space: nowrap; }
+    .region { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: center; padding: 10px 12px; }
+    .region .name, .region .detail { grid-column: 1; }
+    .region .price { grid-column: 2; grid-row: 1 / span 3; margin: 0; font-size: 24px; text-align: right; }
+    #strain-q { font-size: 16px; max-width: none; }
+    .strain-box { max-height: none; overflow: visible; }
+    .strain-box thead th { position: static; }
+    .card { padding: 14px; }
+    td span { white-space: normal; }
+  }
+  @media (max-width: 720px) {
+    .hero { grid-template-columns: 1fr; }
+    .regions { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 104px 1fr 112px; gap: 8px; }
+    .axis { margin-left: 112px; margin-right: 120px; }
+    details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary .town::before { content: '▸ '; color: var(--text-3); }
+  details[open] > summary .town::before { content: '▾ '; }
+  details[open] { background: color-mix(in srgb, var(--accent) 5%, transparent); border-radius: 8px; padding-bottom: 4px; }
+  .hidden-note { margin-left: 104px; }
+    .big { font-size: 38px; }
+    th, td { padding: 8px 4px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="topbar">
+      <div class="brand">Trim Depot</div>
+      <button class="submit-btn" id="submit-btn" hidden>Get an Offer</button>
+    </div>
+    <h1>NorCal Flower Market Tracker</h1>
+    <p class="sub">Live wholesale prices for Northern California flower (larges), from real Trim Depot purchases. See what your strain is worth today, in your area, and where the market's heading.</p>
+    <p class="cred" id="cred"></p>
+    <div class="meta" id="meta">Loading…</div>
+  </header>
+
+  <div class="controls">
+    <div class="ctl"><label>Time period</label><div class="seg" id="ctl-window"></div></div>
+    <div class="ctl"><label>Type</label><div class="seg" id="ctl-type"></div></div>
+  </div>
+
+  <section class="card hero" id="hero"></section>
+
+  <section class="card">
+    <h2>Market trend</h2>
+    <div class="moves" id="moves"></div>
+    <p class="hint" id="slide-hint"></p>
+    <div id="slide"></div>
+  </section>
+
+  <section class="card">
+    <h2>When do prices come back?</h2>
+    <p class="hist-head" id="hist-head"></p>
+    <div class="chart-wrap" id="hist"></div>
+    <p class="hint" id="hist-note" style="margin-top:8px"></p>
+  </section>
+
+  <section class="card">
+    <h2>By town</h2>
+    <p class="hint">Typical price per pound in each town, the range the middle half of the pounds sold in, and the pounds we picked up there.</p>
+    <div id="towns"></div>
+  </section>
+
+  <section class="card">
+    <h2>Prices by area</h2>
+    <p class="hint">For product sold in each time period: typical price we paid per pound, pounds picked up, and how many farms we bought from.</p>
+    <div id="windows"></div>
+  </section>
+
+  <section class="card">
+    <h2>By strain</h2>
+    <div class="hint" id="strain-hint"></div>
+    <input id="strain-q" type="search" placeholder="Search strains" autocomplete="off">
+    <div id="strains" class="strain-box"></div>
+  </section>
+
+  <section class="card">
+    <h2>Price by week</h2>
+    <p class="hint">Prices are coming down as harvest comes in. Top: typical price we paid per pound each week (Monday to Sunday). Bottom: pounds picked up for the lots we sold that week. Weeks with under 50 lbs priced in an area are left off the price line.</p>
+    <div class="legend" id="trend-legend"></div>
+    <div class="chart-wrap" id="trend"></div>
+  </section>
+
+</main>
+
+<div id="submit-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="sm-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><h2 id="sm-title">Get an Offer</h2><p class="hint" style="margin:2px 0 0">Tell us what you've got. We'll get back to you with an offer.</p></div>
+      <button id="sm-close" class="mm-close" aria-label="Close">Close</button>
+    </div>
+    <form id="sf" class="sf-scroll" novalidate autocomplete="on">
+      <div class="sf-label">Your info <small id="sf-saved"></small></div>
+      <div class="sf-contact">
+        <input class="sf-in" id="sf-first" name="given-name" autocomplete="given-name" placeholder="First name" enterkeyhint="next">
+        <input class="sf-in" id="sf-farm" name="organization" autocomplete="organization" placeholder="Farm name" enterkeyhint="next">
+        <input class="sf-in sf-phone" id="sf-phone" name="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="Phone" enterkeyhint="next">
+      </div>
+      <div class="sf-label">Who's your rep? <small>Optional</small></div>
+      <div class="sf-rep" id="sf-rep" role="group" aria-label="Who's your rep?">
+        <button type="button" data-rep="Mason" aria-pressed="false">Mason</button>
+        <button type="button" data-rep="Trent" aria-pressed="false">Trent</button>
+        <button type="button" data-rep="Ryan" aria-pressed="false">Ryan</button>
+        <button type="button" data-rep="None" aria-pressed="false">None</button>
+      </div>
+      <div class="sf-label">Your flower</div>
+      <div class="sf-tip">
+        <img src="submit-example.jpg" alt="Example: a pound in a turkey bag, bag rolled back, shot from above" id="sf-example">
+        <div><b>Best photo</b><p>Shoot straight down on a full pound in the turkey bag, with the bag rolled back so we can see the buds. Natural light, no filters.</p></div>
+      </div>
+      <div id="sf-strains"></div>
+      <button type="button" class="sf-add-strain" id="sf-add">+ Add another strain</button>
+    </form>
+    <div id="sf-done" class="sf-scroll sf-done" hidden></div>
+    <div class="sf-foot" id="sf-foot">
+      <p class="sf-status" id="sf-status" role="status"></p>
+      <button type="submit" form="sf" class="sf-send" id="sf-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="media-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mm-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><h2 id="mm-title"></h2><p class="hint" id="mm-sub" style="margin:2px 0 0"></p></div>
+      <button id="mm-close" class="mm-close" aria-label="Close">Close</button>
+    </div>
+    <div id="mm-body" class="mm-body"></div>
+  </div>
+</div>
+
+<script>window.MARKET_DATA_URL = 'data.json'; window.PAGE_VERSION = '78fd958';</script>
+<script>
+const WINDOW_LABEL = { 7: 'Last 7 days', 14: 'Last 14 days', 30: 'Last 30 days', 60: 'Last 60 days', 90: 'Last 90 days', 180: 'Last 6 months' };
+const WINDOW_SHORT = { 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days', 90: '90 days', 180: '6 months' };
+const TIER_LABEL = { larges: 'Larges', smalls: 'Smalls' };
+const TYPE_LABEL = {};
+const REGION_VAR = { humboldt: '--humboldt', mendo: '--mendo', sierra: '--sierra' };
+
+const state = { window: 14, type: 'Dep', tier: 'larges' };
+try { Object.assign(state, JSON.parse(localStorage.getItem('td-market') || '{}')); } catch (e) {}
+const q = new URLSearchParams(location.search);
+if (q.get('type')) state.type = q.get('type');
+if (q.get('days')) state.window = +q.get('days');
+if (q.get('grade')) state.tier = q.get('grade');
+
+let data = null;
+const $ = (id) => document.getElementById(id);
+const fmt$ = (n) => '$' + Math.round(n).toLocaleString();
+const fmtLbs = (n) => Math.round(n).toLocaleString() + ' lbs';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const cssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const typeName = (t) => TYPE_LABEL[t] || t;
+
+function slice(type = state.type, tier = state.tier) { return data.slices[type + '|' + tier]; }
+function hasData(type, tier) {
+  const s = data.slices[type + '|' + tier];
+  return s && data.windows.some((w) => !s.windows[w].all.hidden);
+}
+
+function seg(el, options, current, onPick) {
+  el.innerHTML = '';
+  options.forEach(([value, label, disabled]) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.setAttribute('aria-pressed', String(value === current));
+    b.disabled = !!disabled;
+    if (disabled) b.title = 'Not enough sales yet to show';
+    b.onclick = () => { onPick(value); render(); };
+    el.appendChild(b);
+  });
+}
+
+function save() {
+  try { localStorage.setItem('td-market', JSON.stringify(state)); } catch (e) {}
+}
+
+function render() {
+  if (!data.tiers.includes(state.tier)) state.tier = data.tiers[0];
+  if (!data.windows.includes(state.window)) state.window = 14;
+  if (!hasData(state.type, state.tier)) {
+    const t = data.types.find((t) => hasData(t, state.tier)) || data.types[0];
+    state.type = t;
+  }
+  save();
+  seg($('ctl-window'), data.windows.map((w) => [w, WINDOW_SHORT[w]]), state.window, (v) => (state.window = v));
+  seg($('ctl-type'), data.types.map((t) => [t, typeName(t), !hasData(t, state.tier)]), state.type, (v) => (state.type = v));
+  renderHero();
+  renderCred();
+  renderSlide();
+  renderHistory();
+  renderTowns();
+  renderWindows();
+  renderStrains();
+  renderTrend();
+}
+
+function what() {
+  return `${state.type} ${TIER_LABEL[state.tier].toLowerCase()}`;
+}
+
+function renderHero() {
+  const w = slice().windows[state.window];
+  const a = w.all;
+  const regionCards = data.regions.map((r) => {
+    const rs = w.regions.find((x) => x.key === r.key).all;
+    const body = rs.hidden
+      ? `<div class="detail" style="margin-top:10px">No ${esc(what())} sold in this period</div>`
+      : `<div class="price">${fmt$(rs.median)}<small style="font-size:13px;font-weight:500;color:var(--text-2)"> /lb</small></div>
+         <div class="detail">Middle range ${fmt$(rs.low)}–${fmt$(rs.high)}</div>
+         <div class="detail">${fmtLbs(rs.picked_lbs)} picked up · ${rs.farms} farms</div>`;
+    return `<div class="region"><div class="name"><i class="sw" style="background:var(${REGION_VAR[r.key]})"></i>${esc(r.label)}</div>${body}</div>`;
+  }).join('');
+
+  const left = a.hidden
+    ? `<div class="label">${WINDOW_LABEL[state.window]}, ${esc(what())}</div><div class="big muted" style="font-size:22px;margin-top:8px">Not enough sales in this period to show a price.</div>`
+    : `<div class="label">Typical price right now · ${WINDOW_LABEL[state.window].toLowerCase()}</div>
+       <div class="big">${fmt$(a.median)}<small> /lb</small></div>
+       <div class="label">${esc(what())}, all Northern California</div>
+       <div class="stats">
+         <div class="stat"><b>${fmt$(a.low)}–${fmt$(a.high)}</b><span>Middle range</span></div>
+         <div class="stat"><b>${Math.round(a.picked_lbs).toLocaleString()}</b><span>Pounds picked up</span></div>
+         <div class="stat"><b>${a.farms}</b><span>Farms</span></div>
+       </div>`;
+  $('hero').innerHTML = `<div>${left}</div><div class="regions">${regionCards}</div>`;
+}
+
+function renderCred() {
+  const a = slice().cred;
+  $('cred').innerHTML = a.farms
+    ? `In the last 6 months we picked up <b>${Math.round(a.picked_lbs).toLocaleString()} lbs</b> of ${esc(what())} from <b>${a.farms} Northern California farms</b>.`
+    : '';
+}
+
+function renderSlide() {
+  const s = slice();
+  $('moves').innerHTML = (s.change || []).map((c) => {
+    const down = c.change < 0, flat = c.change === 0;
+    return `<div class="move ${down ? 'down' : flat ? '' : 'up'}"><div class="move-big">${flat ? '■' : down ? '▼' : '▲'} ${Math.abs(c.pct)}%</div>
+      <div class="move-sub">${flat ? 'No change' : `${down ? 'Down' : 'Up'} ${fmt$(Math.abs(c.change))}/lb`} in the last ${c.days} days</div>
+      <div class="move-from">${fmt$(c.was)} → ${fmt$(c.now)} per lb</div></div>`;
+  }).join('');
+  const mark = s.windows[data.windows[0]].dist.mark, high = s.windows[data.windows[0]].dist.high_mark;
+  $('slide-hint').innerHTML = `${esc(what())}, all Northern California. Typical price we paid, the share of pounds we bought for under $${mark}/lb, and the share at $${high}/lb and up.`;
+  let html = `<table><thead><tr><th>Period</th><th>Typical price</th><th>Share under $${mark}</th><th>Share $${high} and up</th></tr></thead><tbody>`;
+  data.windows.slice().reverse().forEach((w) => {
+    const win = s.windows[w];
+    html += win.all.hidden
+      ? `<tr><td><span class="lg">${WINDOW_LABEL[w]}</span><span class="sm">${WINDOW_SHORT[w]}</span></td><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td></tr>`
+      : `<tr class="${w === state.window ? 'sel' : ''}"><td><span class="lg">${WINDOW_LABEL[w]}</span><span class="sm">${WINDOW_SHORT[w]}</span></td><td><b>${fmt$(win.all.median)}</b></td><td><b>${win.dist.under_pct}%</b></td><td><b>${win.dist.over_pct}%</b></td></tr>`;
+  });
+  $('slide').innerHTML = html + '</tbody></table>';
+}
+
+// "Get an Offer" (was "Submit Your Flower"): our own form (matches the page, built for phones). Photos are shrunk on the phone and
+// uploaded as soon as they're picked, to Ryan's Google relay (relay/Code.gs, a Google Apps Script web app),
+// which saves them to Google Drive, saves the submission to Airtable > Flower Submissions and emails Ryan.
+// The page holds no keys: SUBMIT_ENDPOINT is the relay's public web-app URL.
+const SUBMIT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyekHCqXGuKfAh6r1RHUWRBey-c3fbLn8SYpptUJwfG1hk8Q5UKj7Q1xS64GXcz9rwxXw/exec';
+const SF_MAX_SIDE = 1800, SF_QUALITY = 0.82, SF_MAX_PHOTOS = 10;
+const sf = { strains: [], nextId: 1, sending: false, rep: '' };
+// Each rep's call-back number, shown on the thank-you screen. "None" = the farm has no rep (same as
+// leaving it blank). Tapping the chosen button again clears it.
+const SF_REPS = { Mason: '707-892-1535', Trent: '707-531-2474', Ryan: '707-531-2479' };
+function sfSetRep(name) {
+  sf.rep = SF_REPS[name] || name === 'None' ? name : '';
+  document.querySelectorAll('#sf-rep button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rep === sf.rep)));
+}
+const sfEsc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function sfPost(body) {
+  if (!SUBMIT_ENDPOINT) throw new Error('The form isn’t connected yet.');
+  const r = await fetch(SUBMIT_ENDPOINT, { method: 'POST', body: JSON.stringify(body) }); // text/plain: no preflight
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Something went wrong');
+  return j;
+}
+
+// Shrink a phone photo (often 4-6 MB) to ~0.5 MB JPEG. The browser applies the photo's rotation.
+async function sfShrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const k = Math.min(1, SF_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', SF_QUALITY));
+    if (!blob) throw new Error('shrink failed');
+    return blob;
+  } catch (e) {
+    if (file.size <= 7.5e6) return file; // can't decode here (e.g. HEIC on a desktop): send as is
+    throw e;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+const sfB64 = (blob) => new Promise((res, rej) => {
+  const fr = new FileReader();
+  fr.onload = () => res(String(fr.result).split(',')[1]);
+  fr.onerror = rej;
+  fr.readAsDataURL(blob);
+});
+
+async function sfUpload(p) {
+  p.state = 'busy'; p.error = ''; sfRenderPhotos(p.strain);
+  try {
+    if (!p.blob) p.blob = await sfShrink(p.file);
+    if (!p.thumb) p.thumb = URL.createObjectURL(p.blob);
+    sfRenderPhotos(p.strain);
+    const j = await sfPost({ action: 'photo', name: p.file.name || 'photo.jpg', type: p.blob.type || 'image/jpeg', data: await sfB64(p.blob) });
+    p.id = j.id; p.state = 'done';
+  } catch (e) {
+    p.state = 'err'; p.error = e.message;
+  }
+  sfRenderPhotos(p.strain);
+  sfStatus();
+}
+
+function sfAddStrain(focus) {
+  const s = { id: sf.nextId++, name: '', lbs: '', photos: [] };
+  sf.strains.push(s);
+  const el = document.createElement('div');
+  el.className = 'sf-card'; el.id = 'sf-s' + s.id;
+  el.innerHTML = `<div class="sf-card-head"><span class="sf-n"></span><button type="button" class="sf-x" aria-label="Remove this strain">Remove</button></div>
+    <div class="sf-row">
+      <input class="sf-in sf-name" placeholder="Strain" autocapitalize="words" enterkeyhint="next">
+      <div class="sf-lbs"><input class="sf-in sf-w" placeholder="Weight" inputmode="decimal" enterkeyhint="done"><span>lbs</span></div>
+    </div>
+    <div class="sf-photos"></div>`;
+  el.querySelector('.sf-name').oninput = (e) => { s.name = e.target.value; e.target.classList.remove('bad'); };
+  el.querySelector('.sf-w').oninput = (e) => { s.lbs = e.target.value; e.target.classList.remove('bad'); sfStatus(); };
+  el.querySelector('.sf-x').onclick = () => {
+    sf.strains = sf.strains.filter(x => x !== s);
+    el.remove(); sfNumber(); sfStatus();
+  };
+  $('sf-strains').appendChild(el);
+  sfRenderPhotos(s); sfNumber(); sfStatus();
+  if (focus) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.querySelector('.sf-name').focus({ preventScroll: true }); }
+}
+function sfNumber() {
+  sf.strains.forEach((s, i) => {
+    const el = $('sf-s' + s.id);
+    el.querySelector('.sf-n').textContent = 'Strain ' + (i + 1);
+    el.querySelector('.sf-x').hidden = sf.strains.length === 1;
+  });
+}
+function sfRenderPhotos(s) {
+  const box = $('sf-s' + s.id)?.querySelector('.sf-photos');
+  if (!box) return;
+  box.innerHTML = '';
+  s.photos.forEach((p) => {
+    const t = document.createElement('div');
+    t.className = 'sf-thumb' + (p.state === 'busy' ? ' busy' : p.state === 'err' ? ' err' : '');
+    t.title = p.error || '';
+    t.innerHTML = `${p.thumb ? `<img src="${p.thumb}" alt="">` : '<img alt="">'}<button type="button" aria-label="Remove photo">×</button>`;
+    t.querySelector('button').onclick = (e) => { e.stopPropagation(); s.photos = s.photos.filter(x => x !== p); sfRenderPhotos(s); sfStatus(); };
+    if (p.state === 'err') t.onclick = () => sfUpload(p);
+    box.appendChild(t);
+  });
+  if (s.photos.length < SF_MAX_PHOTOS) {
+    const add = document.createElement('label');
+    add.className = 'sf-add-photo';
+    add.innerHTML = `<b>+</b>${s.photos.length ? 'More' : 'Photos'}<input type="file" accept="image/*" multiple>`;
+    add.querySelector('input').onchange = (e) => {
+      [...e.target.files].slice(0, SF_MAX_PHOTOS - s.photos.length).forEach((file) => {
+        const p = { file, strain: s, state: 'busy' };
+        s.photos.push(p);
+        sfUpload(p);
+      });
+      sfRenderPhotos(s);
+    };
+    box.appendChild(add);
+  }
+}
+
+function sfStatus(msg, bad) {
+  const st = $('sf-status');
+  const busy = sf.strains.reduce((a, s) => a + s.photos.filter(p => p.state === 'busy').length, 0);
+  st.className = 'sf-status' + (bad ? ' bad' : '');
+  st.textContent = msg || (busy ? `Uploading ${busy} photo${busy > 1 ? 's' : ''}… you can keep typing.` : '');
+  const n = sf.strains.filter(s => s.name.trim() || s.lbs).length || 1;
+  const lbs = sf.strains.reduce((a, s) => a + (parseFloat(s.lbs) || 0), 0);
+  $('sf-send').textContent = sf.sending ? 'Sending…' : `Send ${n} strain${n > 1 ? 's' : ''}${lbs ? ` · ${+lbs.toFixed(2)} lbs` : ''}`;
+  $('sf-send').disabled = sf.sending;
+}
+
+function sfContact() {
+  return { first: $('sf-first').value.trim(), farm: $('sf-farm').value.trim(), phone: $('sf-phone').value.trim(), rep: sf.rep };
+}
+function sfLoadContact() {
+  try {
+    const c = JSON.parse(localStorage.getItem('sf-contact') || 'null');
+    if (c) { $('sf-first').value = c.first || ''; $('sf-farm').value = c.farm || ''; $('sf-phone').value = c.phone || ''; sfSetRep(c.rep); $('sf-saved').textContent = 'Saved on this phone'; }
+  } catch (e) { /* private mode */ }
+}
+
+async function sfSubmit(e) {
+  e.preventDefault();
+  if (sf.sending) return;
+  const c = sfContact();
+  const bad = [];
+  for (const [id, v] of [['sf-first', c.first], ['sf-farm', c.farm], ['sf-phone', c.phone]]) if (!v) bad.push($(id));
+  const filled = sf.strains.filter(s => s.name.trim() || s.lbs || s.photos.length);
+  if (!filled.length) bad.push($('sf-s' + sf.strains[0].id).querySelector('.sf-name'));
+  filled.forEach((s) => {
+    const el = $('sf-s' + s.id);
+    if (!s.name.trim()) bad.push(el.querySelector('.sf-name'));
+    if (!(parseFloat(s.lbs) > 0)) bad.push(el.querySelector('.sf-w'));
+  });
+  bad.forEach(x => x.classList.add('bad'));
+  if (bad.length) {
+    bad[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); bad[0].focus({ preventScroll: true });
+    return sfStatus('Fill in the boxes in red.', true);
+  }
+  sf.sending = true; sfStatus('Sending…');
+  try {
+    // Wait for photos still uploading; retry failed ones once.
+    for (let round = 0; round < 2; round++) {
+      const all = filled.flatMap(s => s.photos);
+      await Promise.all(all.filter(p => p.state === 'err').map(sfUpload));
+      while (all.some(p => p.state === 'busy')) { sfStatus(); await new Promise(r => setTimeout(r, 400)); }
+    }
+    const failed = filled.flatMap(s => s.photos).filter(p => p.state !== 'done').length;
+    await sfPost({ action: 'submit', ...c, strains: filled.map(s => ({ strain: s.name.trim(), lbs: parseFloat(s.lbs), photos: s.photos.filter(p => p.id).map(p => p.id) })) });
+    try { localStorage.setItem('sf-contact', JSON.stringify(c)); } catch (err) { /* private mode */ }
+    sfDone(c, filled.length, failed);
+  } catch (err) {
+    sf.sending = false;
+    sfStatus(`Couldn’t send: ${err.message} Please try again.`, true);
+  }
+}
+
+function sfDone(c, n, failed) {
+  sf.sending = false;
+  $('sf').hidden = true; $('sf-foot').hidden = true;
+  const d = $('sf-done');
+  d.hidden = false;
+  const num = SF_REPS[c.rep];
+  const missed = failed ? ` (${failed} photo${failed > 1 ? 's' : ''} didn’t upload; we'll ask for ${failed > 1 ? 'them' : 'it'}.)` : '';
+  d.innerHTML = `<div class="sf-check">✓</div><h3>Thank you, ${sfEsc(c.first)}!</h3>
+    ${num
+      ? `<p style="margin:0">${c.rep} will be in touch with an offer shortly from</p>
+         <a class="sf-callback" href="tel:+1${num.replace(/\D/g, '')}">${num}</a>
+         <p class="sf-save">Save it so you know it's us.${missed}</p>`
+      : `<p>Trim Depot will be in touch with an offer shortly.${missed}</p>`}
+    <button type="button" class="sf-send" id="sf-more">Send more flower</button>
+    <button type="button" class="sf-ghost" id="sf-done-close">Close</button>`;
+  $('sf-more').onclick = () => sfReset();
+  $('sf-done-close').onclick = () => closeSubmit();
+}
+
+function sfReset() {
+  sf.strains.forEach(s => s.photos.forEach(p => p.thumb && URL.revokeObjectURL(p.thumb)));
+  sf.strains = []; $('sf-strains').innerHTML = '';
+  $('sf-done').hidden = true; $('sf').hidden = false; $('sf-foot').hidden = false;
+  sfLoadContact(); sfAddStrain(false);
+}
+
+$('sf').addEventListener('submit', sfSubmit);
+$('sf-add').onclick = () => sfAddStrain(true);
+document.querySelectorAll('#sf-rep button').forEach(b => { b.onclick = () => sfSetRep(sf.rep === b.dataset.rep ? '' : b.dataset.rep); });
+['sf-first', 'sf-farm', 'sf-phone'].forEach(id => $(id).addEventListener('input', (e) => e.target.classList.remove('bad')));
+$('sf-example').onclick = () => {
+  const z = document.createElement('div');
+  z.className = 'sf-zoom';
+  z.innerHTML = '<img src="submit-example.jpg" alt="Example photo">';
+  z.onclick = () => z.remove();
+  document.body.appendChild(z);
+};
+$('submit-btn').hidden = false;
+$('submit-btn').onclick = () => {
+  if (!sf.strains.length || !$('sf-done').hidden) sfReset();
+  $('submit-modal').hidden = false;
+  document.body.classList.add('modal-open');
+};
+// Closing keeps what they typed (and photos already uploaded) in case they tapped Close by accident.
+function closeSubmit() {
+  $('submit-modal').hidden = true;
+  document.body.classList.remove('modal-open');
+  document.querySelector('.sf-zoom')?.remove();
+}
+document.addEventListener('click', (e) => { if (e.target.id === 'sm-close') closeSubmit(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('submit-modal').hidden) closeSubmit(); });
+
+// Expected buy price shows as a range (room to negotiate); older data without a range falls back to one number.
+const fmtRange = (x) => (x.low && x.high ? `${fmt$(x.low)}\u2013${fmt$(x.high)}` : fmt$(x.expected));
+const OFFER_NOTE = 'Final offer depends on quality, test results and volume.';
+
+let strainsExpanded = false;
+function renderStrains() {
+  const list = slice().windows[state.window].strains, now = slice().market_now;
+  const q = ($('strain-q').value || '').trim().toLowerCase();
+  const rows = q ? list.filter((x) => x.strain.toLowerCase().includes(q)) : list;
+  // "How to read this" (Ryan 10/3: farmers need it dead simple): plain words, and the example uses the same two
+  // numbers the farmer sees in the table. Example = the strain with the most pounds whose average paid is above
+  // today's range (shows that prices have come down), else any strain with an estimate.
+  const byLbs = (a, b) => b.picked_lbs - a.picked_lbs;
+  const ex = list.filter((x) => x.expected && x.avg && x.avg > (x.high || x.expected)).sort(byLbs)[0]
+    || list.filter((x) => x.expected && x.avg).sort(byLbs)[0];
+  $('strain-hint').innerHTML = `${WINDOW_LABEL[state.window]}, ${esc(what())}, all Northern California. ${list.length} strains, A to Z. Tap <b>▶ View</b> to watch videos of the flower.`
+    + (ex ? `<div class="howto"><div class="howto-title">How to read this</div>
+      <p><b>Avg paid</b> = what we paid for that strain before.</p>
+      <p><b>Expected today</b> = what we would pay for it today.</p>
+      <p class="howto-ex">Example: we paid <b>${fmt$(ex.avg)}</b> for ${esc(ex.strain)}. ${ex.avg > (ex.high || ex.expected) ? 'Prices are lower now, so today' : 'Today'} we would pay about <b>${fmtRange(ex)}</b>.</p>
+      <p class="muted">* ${OFFER_NOTE}</p></div>` : '');
+  if (!rows.length) { $('strains').innerHTML = `<p class="muted">${list.length ? 'No strain matches that search.' : 'No purchases in this period.'}</p>`; return; }
+  // Phones: show the first strains and an Expand button, so the list doesn't take over the page.
+  const COLLAPSED = 10;
+  const phone = window.matchMedia('(max-width: 560px)').matches;
+  const collapse = phone && !q && !strainsExpanded && rows.length > COLLAPSED;
+  const shown = collapse ? rows.slice(0, COLLAPSED) : rows;
+  let html = `<table><thead><tr><th>Strain</th><th><span class="lg">Average paid /lb</span><span class="sm">Avg paid</span></th><th><span class="lg">Expected buy price today*</span><span class="sm">Expected today*</span></th><th><span class="lg">Lbs picked up</span><span class="sm">Lbs</span></th><th class="hide-sm">Farms</th><th>Media</th></tr></thead><tbody>`;
+  shown.forEach((x) => {
+    html += `<tr><td>${esc(x.strain)}</td><td>${x.avg ? fmt$(x.avg) : '<span class="muted">—</span>'}</td><td class="nowrap">${x.expected ? `<b>${fmtRange(x)}</b>` : '<span class="muted">—</span>'}</td><td>${Math.round(x.picked_lbs).toLocaleString()}</td><td class="hide-sm">${x.farms}</td><td>${(x.media || []).length
+      ? `<button class="media-btn" data-strain="${esc(x.strain)}">▶ View</button>`
+      : '<span class="muted">—</span>'}</td></tr>`;
+  });
+  html += `</tbody></table><p class="hint" style="margin:8px 0 0">* ${OFFER_NOTE}</p>`;
+  if (phone && !q && rows.length > COLLAPSED) {
+    html += strainsExpanded
+      ? `<button class="expand-btn" id="strains-toggle">Show fewer</button>`
+      : `<button class="expand-btn" id="strains-toggle">Show all ${rows.length} strains</button>`;
+  }
+  $('strains').innerHTML = html;
+  const toggle = $('strains-toggle');
+  if (toggle) toggle.onclick = () => {
+    strainsExpanded = !strainsExpanded;
+    renderStrains();
+    if (!strainsExpanded) $('strain-q').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+  $('strains').querySelectorAll('.media-btn').forEach((b) => {
+    b.onclick = () => openMedia(rows.find((x) => x.strain === b.dataset.strain));
+  });
+}
+
+// Video window: the strain's videos, newest first. Players load only when the window opens and are
+// removed when it closes, so nothing keeps playing in the background.
+function openMedia(x) {
+  if (!x || !x.media || !x.media.length) return;
+  $('mm-title').textContent = x.strain;
+  $('mm-sub').textContent = `${x.media.length} video${x.media.length > 1 ? 's' : ''} of ${x.strain} we bought from Northern California farms${x.expected ? `. Expected buy price today: ${fmtRange(x)}/lb (${OFFER_NOTE.charAt(0).toLowerCase() + OFFER_NOTE.slice(1, -1)})` : ''}.`;
+  $('mm-body').innerHTML = x.media.map((v, i) => {
+    const ar = v.w && v.h ? v.w / v.h : 16 / 9;
+    return `<figure class="player-wrap"><div class="player" style="--ar:${ar}">
+        <iframe src="https://iframe.mediadelivery.net/embed/633936/${encodeURIComponent(v.id)}?autoplay=false&preload=true&responsive=true"
+          loading="lazy" allow="accelerometer; gyroscope; encrypted-media; picture-in-picture" allowfullscreen title="${esc(x.strain)} video ${i + 1}"></iframe>
+      </div><figcaption>Video ${i + 1} of ${x.media.length}</figcaption></figure>`;
+  }).join('');
+  $('media-modal').hidden = false;
+  document.body.classList.add('modal-open');
+  $('mm-close').focus();
+}
+function closeMedia() {
+  $('media-modal').hidden = true;
+  $('mm-body').innerHTML = '';
+  document.body.classList.remove('modal-open');
+}
+document.addEventListener('click', (e) => { if (e.target.id === 'media-modal' || e.target.id === 'mm-close') closeMedia(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('media-modal').hidden) closeMedia(); });
+document.addEventListener('input', (e) => { if (e.target.id === 'strain-q' && data) renderStrains(); });
+
+function renderHistory() {
+  const S = slice(), hist = S.history || [], now = S.market_now;
+  const mon = (m, opt) => new Date(m + '-15').toLocaleDateString('en-US', opt || { month: 'short' });
+  const addMonths = (m, k) => { const d = new Date(m + '-15'); d.setMonth(d.getMonth() + k); return d.toISOString().slice(0, 7); };
+  const past = hist.filter((h) => !h.current);
+  const known = past.filter((h) => h.median != null);
+  if (known.length < 6 || !now) {
+    $('hist').innerHTML = '<p class="muted">Not enough history for this type yet.</p>'; $('hist-head').textContent = ''; $('hist-note').textContent = ''; return;
+  }
+  // Last year's pattern starts at its fall drop: the first month priced below the month before it.
+  const dropAt = known.findIndex((h, k) => k > 0 && h.median < known[k - 1].median);
+  const dropMonth = (dropAt > 0 ? known[dropAt] : known[0]).month;
+  // Last year's monthly prices from the drop on, with thin months filled in halfway between their neighbors.
+  const ly = past.filter((h) => h.month >= dropMonth).map((h) => ({ month: h.month, v: h.median }));
+  ly.forEach((p, k) => {
+    if (p.v != null) return;
+    const a = ly.slice(0, k).reverse().find((q) => q.v != null), b = ly.slice(k + 1).find((q) => q.v != null);
+    if (a && b) p.v = Math.round((a.v + b.v) / 2);
+  });
+  // Prediction: start at today's price and follow last year's month-to-month pattern from its first month,
+  // shifted by how far today's price is from where last year started.
+  const thisMonth = hist.find((h) => h.current).month;
+  const offset = now - ly[0].v;
+  const pred = [{ month: thisMonth, v: now }];
+  for (let k = 0; k < ly.length; k++) {
+    if (ly[k].v == null) continue;
+    pred.push({ month: addMonths(thisMonth, k + 1), v: Math.max(0, ly[k].v + offset) });
+    if (pred[pred.length - 1].v >= 300) break; // the line stops where it gets back to $300
+  }
+  const back = pred.find((p, k) => k > 0 && p.v >= 300);
+  const actual = known.map((h) => ({ month: h.month, v: h.median })).concat([{ month: thisMonth, v: now }]);
+
+  // Last year's story, for the headline.
+  const first = known.find((h) => h.month === dropMonth) || known[0], lyBack = known.find((h) => h.month > first.month && h.median >= 300);
+  const winter = known.filter((h) => h.month >= first.month && (!lyBack || h.month < lyBack.month));
+  const lo = Math.min(...winter.map((h) => h.median)), hi = Math.max(...winter.map((h) => h.median));
+  $('hist-head').innerHTML = lyBack
+    ? `Last year, after prices dropped in ${mon(first.month, { month: 'long' })}, they stayed at <b>${fmt$(lo)}–${fmt$(hi)}</b> and didn't get back to <b>$300 until ${mon(lyBack.month, { month: 'long' })}</b>. Following the same pattern from today's ${fmt$(now)}, we expect <b>$300 around ${back ? mon(back.month, { month: 'long', year: 'numeric' }) : 'next summer at the earliest'}</b>.`
+    : `Since ${mon(first.month, { month: 'long', year: 'numeric' })}, ${esc(what())} hasn't gone back to $300.`;
+  $('hist-note').innerHTML = `<b>Blue:</b> typical price we paid each month for the last 12 months, ${esc(what())}, all Northern California, ending at today's ${fmt$(now)} (last 14 days). <b>Orange:</b> our prediction, up to where prices get back to $300. It starts at today's price and follows last year's month-to-month pattern after its fall drop, shifted ${offset < 0 ? 'down ' + fmt$(-offset) : offset > 0 ? 'up ' + fmt$(offset) : ''} because prices start ${offset < 0 ? 'lower' : offset > 0 ? 'higher' : 'level with'} than last ${mon(first.month, { month: 'long' })}. Based on one year of history: a guide, not a promise.`;
+
+  const months = []; for (let m = actual[0].month; m <= pred[pred.length - 1].month; m = addMonths(m, 1)) months.push(m);
+  const idx = (m) => months.indexOf(m);
+  const W = Math.max($('hist').clientWidth, 300), H = 260, pl = 56, pr = 16, pt = 22, pb = 30;
+  const n = months.length, band = (W - pl - pr) / n;
+  const x = (i) => pl + band * (i + 0.5);
+  const yhi = Math.max(400, Math.ceil(Math.max(...actual.concat(pred).map((p) => p.v)) / 50) * 50);
+  const y = (v) => pt + (1 - v / yhi) * (H - pt - pb);
+  const ink3 = cssVar('--text-3'), blue = cssVar('--accent'), orange = cssVar('--mendo');
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Typical price by month, and our prediction">`;
+  for (let v = 0; v <= yhi; v += 100) {
+    svg += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="${cssVar('--grid')}"/>`;
+    svg += `<text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${ink3}">$${v}/lb</text>`;
+  }
+  svg += `<line x1="${pl}" x2="${W - pr}" y1="${y(300)}" y2="${y(300)}" stroke="${cssVar('--text-2')}" stroke-dasharray="4 4"/>`;
+  svg += `<text x="${pl + 4}" y="${y(300) - 5}" font-size="11" fill="${cssVar('--text-2')}">$300</text>`;
+  const step = W < 560 ? 3 : 2;
+  months.forEach((m, i) => {
+    const lbl = m.endsWith('-01') ? mon(m, { month: 'short', year: '2-digit' }).replace(' ', " '") : mon(m);
+    if (i % step === 0 || m === thisMonth) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="${m === thisMonth ? cssVar('--text') : ink3}" ${m === thisMonth ? 'font-weight="600"' : ''}>${m === thisMonth ? 'Now' : lbl}</text>`;
+  });
+  const path = (pts) => pts.map((p, k) => `${k ? 'L' : 'M'}${x(idx(p.month))},${y(p.v)}`).join('');
+  svg += `<path d="${path(pred)}" fill="none" stroke="${orange}" stroke-width="2.5" stroke-dasharray="6 5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  svg += `<path d="${path(actual)}" fill="none" stroke="${blue}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  actual.forEach((p) => (svg += `<circle cx="${x(idx(p.month))}" cy="${y(p.v)}" r="3.5" fill="${blue}" stroke="${cssVar('--surface')}" stroke-width="2"/>`));
+  if (back) {
+    const bx = x(idx(back.month)), by = y(back.v);
+    svg += `<circle cx="${bx}" cy="${by}" r="6" fill="${orange}" stroke="${cssVar('--surface')}" stroke-width="2"/>`;
+    const anchor = bx > W - 70 ? 'end' : bx < pl + 70 ? 'start' : 'middle'; // keep the label inside the chart
+    svg += `<text x="${anchor === 'end' ? bx + 6 : bx}" y="${by - 12}" text-anchor="${anchor}" font-size="12" font-weight="700" fill="${cssVar('--text')}">$300 ≈ ${mon(back.month, { month: 'short', year: 'numeric' })}</text>`;
+  }
+  svg += `<rect x="${pl}" y="0" width="${W - pl - pr}" height="${H}" fill="transparent" id="hhit"/></svg>`;
+  const legend = `<div class="legend"><span><i class="sw" style="background:${blue}"></i>What we paid</span><span><i class="sw" style="background:${orange}"></i>Our prediction</span></div>`;
+  $('hist').innerHTML = legend + svg + '<div class="tip" hidden id="htip"></div>';
+  const hit = $('hist').querySelector('#hhit'), tip = $('htip');
+  const move = (ev) => {
+    const box = $('hist').querySelector('svg').getBoundingClientRect();
+    const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left) * (W / box.width);
+    const m = months[Math.max(0, Math.min(n - 1, Math.floor((px - pl) / band)))];
+    const a = actual.find((p) => p.month === m), f = m !== thisMonth && pred.find((p) => p.month === m);
+    const h = hist.find((q) => q.month === m);
+    tip.innerHTML = `<div class="t">${m === thisMonth ? 'Now' : mon(m, { month: 'long', year: 'numeric' })}</div>`
+      + (a ? `<div><i class="sw" style="background:${blue}"></i>Paid: <b>${fmt$(a.v)}/lb</b>${m === thisMonth ? ' (last 14 days)' : h ? ` · ${h.lbs.toLocaleString()} lbs` : ''}</div>` : '')
+      + (f ? `<div><i class="sw" style="background:${orange}"></i>Predicted: <b>${fmt$(f.v)}/lb</b></div>` : '')
+      + (!a && !f ? `<div>Too few pounds that month to show</div>` : '');
+    tip.hidden = false;
+    tip.style.left = Math.max(0, Math.min((x(idx(m)) / W) * box.width + 12, box.width - tip.offsetWidth)) + 'px';
+    tip.style.top = '30px';
+  };
+  hit.addEventListener('mousemove', move);
+  hit.addEventListener('touchstart', move, { passive: true });
+  hit.addEventListener('mouseleave', () => (tip.hidden = true));
+}
+
+function renderTowns() {
+  const w = slice().windows[state.window];
+  if (w.all.hidden) { $('towns').innerHTML = '<p class="muted">No purchases in this period.</p>'; return; }
+  const day = (d) => new Date(d + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const cells = (s) => (s.hidden ? `<td class="muted">—</td><td></td>` : `<td><b>${fmt$(s.median)}</b></td><td class="rng">${fmt$(s.low)}–${fmt$(s.high)}</td>`)
+    + `<td>${s.picked_lbs ? Math.round(s.picked_lbs).toLocaleString() : '<span class="muted">0</span>'}</td>`;
+  let html = `<table class="towns"><thead><tr><th>Town</th><th>Typical /lb</th><th>Middle range</th><th>Lbs picked up</th><th class="hide-sm">Farms</th></tr></thead><tbody>`;
+  data.regions.forEach((r) => {
+    const reg = w.regions.find((x) => x.key === r.key);
+    html += `<tr class="region-row"><td colspan="5"><i class="sw" style="display:inline-block;margin-right:7px;background:var(${REGION_VAR[r.key]})"></i>${esc(r.label)}</td></tr>`;
+    if (reg.all.hidden) { html += `<tr><td colspan="5" class="muted">No purchases in this period.</td></tr>`; return; }
+    html += `<tr class="area"><td>Whole area</td>${cells(reg.all)}<td class="hide-sm">${reg.all.farms}</td></tr>`;
+    reg.towns.forEach((t) => {
+      html += `<tr><td>${esc(t.town)}</td>${cells(t)}<td class="hide-sm">${t.farms}</td></tr>`;
+    });
+  });
+  $('towns').innerHTML = html + '</tbody></table>';
+}
+
+function renderWindows() {
+  const s = slice();
+  const cols = [{ key: 'all', label: 'All N. California' }, ...data.regions.map((r) => ({ key: r.key, label: r.label }))];
+  const cell = (st) => `<td>${st.hidden ? '<b class="muted">—</b>' : `<b>${fmt$(st.median)}</b>`}<span>${fmtLbs(st.picked_lbs)}</span><span>${st.farms} farm${st.farms === 1 ? '' : 's'}</span></td>`;
+  let html = `<table><thead><tr><th>Period</th>${cols.map((c) => `<th>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>`;
+  data.windows.forEach((w) => {
+    const win = s.windows[w];
+    html += `<tr class="${w === state.window ? 'sel' : ''}"><td><span class="lg">${WINDOW_LABEL[w]}</span><span class="sm">${WINDOW_SHORT[w]}</span></td>${cell(win.all)}${data.regions.map((r) => cell(win.regions.find((x) => x.key === r.key).all)).join('')}</tr>`;
+  });
+  $('windows').innerHTML = html + '</tbody></table>';
+}
+
+function weekLabel(w) {
+  return new Date(w + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function renderTrend() {
+  const trend = slice().trend;
+  const usable = (st) => !st.hidden && !st.thin;
+  const series = [
+    { key: 'all', label: 'All N. California', color: cssVar('--text'), width: 2.5, get: (t) => t.all },
+    ...data.regions.map((r) => ({ key: r.key, label: r.label, color: cssVar(REGION_VAR[r.key]), width: 2, get: (t) => t.regions[r.key] })),
+  ].map((s) => ({ ...s, pts: trend.map((t, i) => ({ i, st: s.get(t), v: usable(s.get(t)) ? s.get(t).median : null })) }));
+  $('trend-legend').innerHTML = series.map((s) => `<span><i class="sw" style="background:${s.color}"></i>${esc(s.label)}</span>`).join('');
+  const vals = series.flatMap((s) => s.pts.filter((p) => p.v != null).map((p) => p.v));
+  if (!vals.length) { $('trend').innerHTML = '<p class="muted">Not enough weekly sales to chart.</p>'; return; }
+
+  const W = Math.max($('trend').clientWidth, 300), pl = 64, pr = 12;
+  const PH = 220, gap = 34, BH = 90, H = PH + gap + BH + 24;
+  const n = trend.length;
+  const band = (W - pl - pr) / n;
+  const x = (i) => pl + band * (i + 0.5);
+  let lo = Math.max(0, Math.floor(Math.min(...vals) / 50) * 50 - 50), hi = Math.ceil(Math.max(...vals) / 50) * 50 + 50;
+  const y = (v) => 10 + (1 - (v - lo) / (hi - lo)) * (PH - 20);
+  const lbsMax = Math.max(...trend.map((t) => t.all.picked_lbs), 1);
+  const lbsTop = Math.ceil(lbsMax / 100) * 100;
+  const by = (v) => PH + gap + (1 - v / lbsTop) * BH;
+  const ink3 = cssVar('--text-3'), grid = cssVar('--grid');
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Typical price per pound and pounds bought, by week">`;
+  // price panel
+  const step = hi - lo > 300 ? 100 : 50;
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    svg += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="${grid}"/>`;
+    svg += `<text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${ink3}">$${v}/lb</text>`;
+  }
+  svg += `<text x="${pl}" y="${PH + gap - 8}" font-size="11" font-weight="600" fill="${cssVar('--text-2')}">Pounds picked up</text>`;
+  // pounds panel
+  [0, lbsTop / 2, lbsTop].forEach((v) => {
+    svg += `<line x1="${pl}" x2="${W - pr}" y1="${by(v)}" y2="${by(v)}" stroke="${grid}"/>`;
+    svg += `<text x="${pl - 6}" y="${by(v) + 4}" text-anchor="end" font-size="11" fill="${ink3}">${Math.round(v).toLocaleString()} lb</text>`;
+  });
+  const bw = Math.max(Math.min(band - 6, 28), 4);
+  trend.forEach((t, i) => {
+    const v = t.all.picked_lbs;
+    if (v > 0) {
+      const top = by(v), h = by(0) - top, r = Math.min(4, h);
+      svg += `<path d="M${x(i) - bw / 2},${by(0)} V${top + r} q0,-${r} ${r},-${r} H${x(i) + bw / 2 - r} q${r},0 ${r},${r} V${by(0)} Z" fill="${cssVar('--accent')}" opacity="${t.current ? 0.45 : 1}"/>`;
+    }
+    if ((i % (W < 600 ? 2 : 1) === 0 && !(W < 600 && i === n - 2)) || t.current)
+      svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="${ink3}">${t.current ? 'This wk*' : weekLabel(t.week)}</text>`;
+  });
+  // price lines, drawn last so they sit on top
+  series.slice().reverse().forEach((s) => {
+    let d = '', pen = false;
+    s.pts.forEach((p) => { if (p.v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(p.i)},${y(p.v)}`; pen = true; });
+    svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.pts.forEach((p) => { if (p.v != null) svg += `<circle cx="${x(p.i)}" cy="${y(p.v)}" r="4" fill="${s.color}" stroke="${cssVar('--surface')}" stroke-width="2"/>`; });
+  });
+  svg += `<line id="xh" y1="4" y2="${by(0)}" stroke="${ink3}" stroke-dasharray="3 3" visibility="hidden"/>`;
+  svg += `<rect x="${pl}" y="0" width="${W - pl - pr}" height="${H}" fill="transparent" id="hit"/></svg>`;
+  $('trend').innerHTML = svg + '<div class="tip" hidden id="tip"></div><p class="muted" style="margin:6px 0 0;font-size:12px">* this week so far</p>';
+
+  const hit = $('trend').querySelector('#hit'), xh = $('trend').querySelector('#xh'), tip = $('tip');
+  const move = (ev) => {
+    const box = $('trend').querySelector('svg').getBoundingClientRect();
+    const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left) * (W / box.width);
+    const i = Math.max(0, Math.min(n - 1, Math.floor((px - pl) / band)));
+    xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('visibility', 'visible');
+    const t = trend[i];
+    tip.innerHTML = `<div class="t">Week of ${weekLabel(t.week)}${t.current ? ' (so far)' : ''}</div>` + series.map((s) => {
+      const st = s.pts[i].st;
+      const txt = (st.hidden ? 'not priced' : `<b>${fmt$(st.median)}/lb</b>${st.thin ? ' (too few lbs to chart)' : ''}`) + ` · ${fmtLbs(st.picked_lbs)} picked up`;
+      return `<div><i class="sw" style="background:${s.color}"></i>${esc(s.label)}: ${txt}</div>`;
+    }).join('');
+    tip.hidden = false;
+    const left = (x(i) / W) * box.width;
+    tip.style.left = Math.max(0, Math.min(left + 12, box.width - tip.offsetWidth)) + 'px';
+    tip.style.top = '8px';
+  };
+  hit.addEventListener('mousemove', move);
+  hit.addEventListener('touchstart', move, { passive: true });
+  hit.addEventListener('mouseleave', () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); });
+}
+
+async function load() {
+  try {
+    // The live site's data file is cached by the host for minutes; a fresh query string gets the latest.
+    const url = window.MARKET_DATA_URL ? `${window.MARKET_DATA_URL}?t=${Date.now()}` : '/api/market';
+    const res = await fetch(url, { cache: 'no-store' });
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || res.statusText);
+    // A newer version went live: reload once to get it, keeping the farm's choices.
+    if (d.version && window.PAGE_VERSION && d.version !== window.PAGE_VERSION) {
+      const u = new URL(location.href);
+      if (u.searchParams.get('v') !== d.version) {
+        u.searchParams.set('v', d.version);
+        u.searchParams.set('days', state.window);
+        u.searchParams.set('type', state.type);
+        location.replace(u.toString());
+        return;
+      }
+    }
+    data = d;
+    const at = new Date(d.generated_at);
+    $('meta').innerHTML = '<span class="live"><i></i>Live</span> Updated ' + at.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    render();
+  } catch (e) {
+    // Keep showing the last good numbers if a refresh fails.
+    if (!data) $('meta').innerHTML = `<span class="err">Couldn't load prices: ${esc(e.message)}</span>`;
+  }
+}
+// New numbers every 5 minutes, and right away when a phone brings the tab back to the front.
+const REFRESH_MS = 5 * 60 * 1000;
+let lastLoad = 0;
+const refresh = () => { lastLoad = Date.now(); load(); };
+setInterval(refresh, REFRESH_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastLoad > REFRESH_MS) refresh(); });
+// Phones fire resize when the address bar slides; only redraw charts when the width really changes.
+let lastWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+  if (!data || window.innerWidth === lastWidth) return;
+  lastWidth = window.innerWidth;
+  renderTrend(); renderHistory(); renderStrains();
+});
+refresh();
+</script>
+</body>
+</html>
